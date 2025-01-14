@@ -44,11 +44,12 @@ def full_adder(circuit, a, b, r, c_in, c_out, AUX):
     # Compute result bit with CNOT gates
     circuit.cx(a,r)
     circuit.cx(b,r)
-    circuit.cx(c_in,r)
     # Compute c_out bit with CNOT and Toffoli gates
     circuit.ccx(a, b, AUX)  # AUX = a AND b
     circuit.ccx(c_in, r, c_out)
     circuit.cx(AUX, c_out)
+    # Complete esult bit
+    circuit.cx(c_in,r)
     # Reverse aux to |0⟩
     circuit.ccx(a, b, AUX)
     # Measure input qubits and store into classical bits
@@ -57,6 +58,24 @@ def full_adder(circuit, a, b, r, c_in, c_out, AUX):
     circuit.measure(measured_qubits, classical_results)
     return circuit
 
+def add(circuit, A, B, R, AUX):
+    '''
+    Implement a circuit that adds A and B
+    by creating a cascade of full-adder circuits.
+    '''
+    # Initialize carry-in bit to 0
+    c_in = AUX[0]
+    # Comput cascade of full-adders
+    for i in range(len(A)):
+        if i+1 < len(A):
+            c_out = AUX[i+1]
+            full_adder(circuit, A[i], B[i], R[i], c_in, c_out, AUX[i])
+            c_in = c_out # Update for next step
+    # Measure input qubits and store into classical bits
+    measured_qubits =[i for i in range(n)]
+    classical_results =[i for i in range(n)]
+    circuit.measure(measured_qubits, classical_results)
+    return circuit
 
 # Code check initialization
 A = [2,4,3,7,5]
@@ -73,6 +92,9 @@ A = [2,4,3]
 B = [1,0,5]
 n = len(A) + len(B)
 circuit = QuantumCircuit(n,n)
+# Initialize qubits for testing
+circuit.x(A[0]) 
+circuit.x(B[2])
 copy(circuit, A, B)
 print("Copy Circuit\n")
 print(circuit)
@@ -89,5 +111,20 @@ c_out = 4
 AUX = 5
 full_adder(circuit, a, b, r, c_in, c_out, AUX)
 print("Full Adder Circuit\n")
+print(circuit)
+print_measures(circuit)
+
+# Code check addition
+A = [0,1,2]
+B = [3,4,5]
+R = [6,7,8]
+AUX = [9,10,11, 12]
+n = len(A) + len(B) + len(R) + len(AUX)
+circuit = QuantumCircuit(n,n)
+circuit.x(A[0])
+circuit.x(A[2])
+circuit.x(B[1])
+add(circuit, A, B, R, AUX)
+print("Addition Circuit\n")
 print(circuit)
 print_measures(circuit)
