@@ -3,7 +3,12 @@
 from qiskit import transpile
 from qiskit_aer import AerSimulator
 
-def print_measures(circuit):
+def print_measures(circuit, x, y):
+    # Measure two qubits and put result to classical bits
+    circuit.measure(x, 0)
+    circuit.measure(y, 1)
+    # Print circuit diagram
+    print(circuit)
     # Define the backend
     backend = AerSimulator()
     # Transpile 
@@ -13,9 +18,4 @@ def print_measures(circuit):
     result = backend.run(compiled_circuit, shots=n_shots).result()
     # Extract Information
     counts = result.get_counts(compiled_circuit)
-    probs = {key:value/n_shots for key,value in counts.items()}
-    decimal_result = {int(key,2):value/n_shots for key,value in counts.items()}
     print("Counts",counts)
-    print("Probabilities:", probs)
-    print("Decimal Result:", decimal_result)
-    print()

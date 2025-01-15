@@ -2,9 +2,6 @@
 # Implementation of functions ordered as instructed
 
 # General imports
-from utils import print_measures
-from qiskit import QuantumCircuit
-import numpy as np
 
 # Initialization
 def set_bits(circuit, A, X):
@@ -16,11 +13,6 @@ def set_bits(circuit, A, X):
         if X[i] == 1:
             # Apply X-gate
             circuit.x(A[i])
-    # Measure input qubits and store into classical bits
-    measured_qubits =[i for i in range(n)]
-    classical_results =[i for i in range(n)]
-    circuit.measure(measured_qubits, classical_results)
-    return circuit
 
 # Copy
 def copy(circuit, A, B):
@@ -30,11 +22,6 @@ def copy(circuit, A, B):
     for a, b in zip(A, B):
         # Apply CNOT gate
         circuit.cx(a, b)
-    # Measure input qubits and store into classical bits
-    measured_qubits =[i for i in range(n)]
-    classical_results =[i for i in range(n)]
-    circuit.measure(measured_qubits, classical_results)
-    return circuit
 
 # Full Adder
 def full_adder(circuit, a, b, r, c_in, c_out, AUX):
@@ -44,20 +31,15 @@ def full_adder(circuit, a, b, r, c_in, c_out, AUX):
     # Compute result bit with CNOT gates
     circuit.cx(a,r)
     circuit.cx(b,r)
+    circuit.cx(c_in,r)
     # Compute c_out bit with CNOT and Toffoli gates
     circuit.ccx(a, b, AUX)  # AUX = a AND b
     circuit.ccx(c_in, r, c_out)
     circuit.cx(AUX, c_out)
-    # Complete esult bit
-    circuit.cx(c_in,r)
     # Reverse aux to |0⟩
     circuit.ccx(a, b, AUX)
-    # Measure input qubits and store into classical bits
-    measured_qubits =[i for i in range(n)]
-    classical_results =[i for i in range(n)]
-    circuit.measure(measured_qubits, classical_results)
-    return circuit
 
+# Addition
 def add(circuit, A, B, R, AUX):
     '''
     Implement a circuit that adds A and B
@@ -67,64 +49,41 @@ def add(circuit, A, B, R, AUX):
     c_in = AUX[0]
     # Comput cascade of full-adders
     for i in range(len(A)):
-        if i+1 < len(A):
-            c_out = AUX[i+1]
-            full_adder(circuit, A[i], B[i], R[i], c_in, c_out, AUX[i])
-            c_in = c_out # Update for next step
-    # Measure input qubits and store into classical bits
-    measured_qubits =[i for i in range(n)]
-    classical_results =[i for i in range(n)]
-    circuit.measure(measured_qubits, classical_results)
-    return circuit
+        c_out = AUX[i+1]
+        full_adder(circuit, A[i], B[i], R[i], c_in, c_out, AUX[i])
+        c_in = c_out # Update for next step
 
-# Code check initialization
-A = [2,4,3,7,5]
-X = "01011"
-n = len(A)
-circuit = QuantumCircuit(n,n)
-set_bits(circuit, A, X)
-print("Initialization Circuit\n")
-print(circuit)
-print_measures(circuit)
+# Substraction
+def substract(circuit, A, B, R, AUX):
+    '''
+    Implement circuit that substracts A and B.
+    '''
+    # Negate each bit of B
+    for b in B:
+        circuit.x(b)
+    # Initialize carry-in bit to 1
+    circuit.x(AUX[0])
+    add(circuit, A, B, R, AUX)
+    # Reset carry-in bit to 0
+    circuit.x(AUX[0])
 
-# Code check copy
-A = [2,4,3]
-B = [1,0,5]
-n = len(A) + len(B)
-circuit = QuantumCircuit(n,n)
-# Initialize qubits for testing
-circuit.x(A[0]) 
-circuit.x(B[2])
-copy(circuit, A, B)
-print("Copy Circuit\n")
-print(circuit)
-print_measures(circuit)
-
-# Code check full adder
-n = 6
-circuit = QuantumCircuit(n,n)
-a = 0
-b = 1
-r = 2
-c_in = 3
-c_out = 4
-AUX = 5
-full_adder(circuit, a, b, r, c_in, c_out, AUX)
-print("Full Adder Circuit\n")
-print(circuit)
-print_measures(circuit)
-
-# Code check addition
-A = [0,1,2]
-B = [3,4,5]
-R = [6,7,8]
-AUX = [9,10,11, 12]
-n = len(A) + len(B) + len(R) + len(AUX)
-circuit = QuantumCircuit(n,n)
-circuit.x(A[0])
-circuit.x(A[2])
-circuit.x(B[1])
-add(circuit, A, B, R, AUX)
-print("Addition Circuit\n")
-print(circuit)
-print_measures(circuit)
+# Comparison
+def greater_or_eq(circuit, A, B, r, AUX):
+    '''
+    Test if A >= B
+    '''
+    n = len(A)
+    # Check if A[i] > B[i]
+    # Iterate from MSB to LSB
+    for i in range(n - 1, -1, -1): 
+        circuit.x(B[i]) # Negate B[i]
+        circuit.mcx([A[i], B[i]], AUX[i])
+        circuit.x(B[i]) # Reverse B[i]
+    # Check if A[i] = B[i]
+    for i in range(len(A)):
+        circuit.x(AUX[i])
+    # Store result in r
+    circuit.mcx([AUX[:n]], r)
+    # Reset AUX qubits to |0⟩
+    for i in range(len(A)):
+        circuit.x(AUX[i])
