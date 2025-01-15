@@ -42,8 +42,7 @@ def full_adder(circuit, a, b, r, c_in, c_out, AUX):
 # Addition
 def add(circuit, A, B, R, AUX):
     '''
-    Implement a circuit that adds A and B
-    by creating a cascade of full-adder circuits.
+    Adds number(A) and number(B).
     '''
     # Initialize carry-in bit to 0
     c_in = AUX[0]
@@ -56,7 +55,7 @@ def add(circuit, A, B, R, AUX):
 # Substraction
 def substract(circuit, A, B, R, AUX):
     '''
-    Implement circuit that substracts A and B.
+    Substracts number(A) and number(B).
     '''
     # Negate each bit of B
     for b in B:
@@ -70,7 +69,7 @@ def substract(circuit, A, B, R, AUX):
 # Comparison
 def greater_or_eq(circuit, A, B, r, AUX):
     '''
-    Test if A >= B
+    Test if number(A) >= number(B)
     '''
     n = len(A)
     # Check if A[i] > B[i]
@@ -87,3 +86,83 @@ def greater_or_eq(circuit, A, B, r, AUX):
     # Reset AUX qubits to |0⟩
     for i in range(len(A)):
         circuit.x(AUX[i])
+
+# Addition Modulo N
+def add_mod(circuit, N, A, B, R, aux):
+    ''''''
+
+
+# Multiplication by Two Modulo N
+def times_two_mod(circuit, N, A, R, AUX):
+    '''
+    Doubles number(A) modulo number(N).
+    '''
+    # Copy A to R
+    copy(circuit, A, R)
+    # Add A to R modulo N (R = A + A mod N)
+    add_mod(circuit, N, A, R, R, AUX)
+
+
+# Multiplication by a Power of Two Modulo N
+def times_two_power_mod(circuit, N, A, k, R, AUX):
+    '''
+    Multiplies number(A) by 2^k modulo number(N).
+    '''
+    for i in range(k):
+        times_two_mod(circuit, N, A, R, AUX)
+
+
+# Multiplication Modulo N
+def multiply_mod(circuit, N, A, B, R, AUX):
+    '''
+    Multiplies number(A) with number(B) modulo number(N).
+    '''
+    # Initialize the result register R to |0⟩
+    for r in R:
+        circuit.reset(r)  # Ensure R starts at |0⟩
+    # Iterate over each bit in B
+    for k in range(len(B)):
+        # Apply controlled multiplication by 2^k modulo N
+        times_two_power_mod(circuit, N, A, k, AUX[:len(A)], AUX[len(A):])
+        for i in range(len(A)):
+            circuit.cx(B[k], AUX[k])
+
+
+# Multiplication Modulo N with a hard-coded factor
+def multiply_mod_fixed(circuit, N, X, B, AUX):
+    '''
+    Multiplies number(B) by a fixed number X modulo number(N),
+    the result (X * B mod N) replaces the value in register B.
+    '''
+    # Represent the binary value of X
+    bin_X = AUX[:len(B)]
+    copy(circuit, X, bin_X)
+    # Use multiply_mod to compute X * B modulo N
+    multiply_mod(circuit, N, bin_X, B, B, AUX[len(B):])
+
+
+# Multiplication by X^2^k modulo N
+def multiply_mod_fixed_power_2_k(circuit, N, X, B, AUX, k):
+    '''
+    Multiplies number(B) by the number(X^2^k) modulo number(N).
+    '''
+    # Pre-compute W = X^(2^k) mod N using classical computation
+    W = X
+    for _ in range(k):
+        W = (W * W) % int(''.join(map(str, N)), 2)
+    # Use the precomputed W to call multiply_mod_fixed
+    multiply_mod_fixed(circuit, N, W, B, AUX)
+
+
+# Multiplication by X^Y modulo N
+def multiply_mod_fixed_power_Y(circuit,N,X,B,AUX,Y):
+    '''
+    Multiplies number(B) by the number(X^Y) modulo number(N).
+    '''
+    # Iterate over each bit of Y
+    for k in range(len(Y)):
+        # If the k-th bit of Y is 0 the operation is skipped
+        # Apply the controlled multiplication by X^(2^k) mod N
+        circuit.x(Y[k])  # Flip Y[k] to use it as control
+        multiply_mod_fixed_power_2_k(circuit, N, X, B, AUX, k)
+        circuit.x(Y[k])  # Revert Y[k]
