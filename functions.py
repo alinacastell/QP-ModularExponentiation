@@ -106,25 +106,32 @@ def add_mod(circuit, N, A, B, R, aux):
     Adds number(A) to number(B) modulo number(N).
     '''
     # Step 1: Add A and B, store result temporarily in aux[:len(R)]
-    temp = aux[:len(R)]  # Use a temporary register for intermediate results
-    add(circuit, A, B, temp, aux[len(R):len(R) + len(A) + 1])  # A + B stored in temp
+    n = len(A)
+    required_aux = 2 * n + 6
 
-    # Step 2: Compare if temp >= N
-    comparison_result = aux[-1]  # Use the last aux qubit to store the comparison result
-    greater_or_eq(circuit, temp, N, comparison_result, aux[len(R):len(R) + len(A)])  # Check if temp >= N
+    if len(aux) < required_aux:
+        raise ValueError(f"add_mod needs at least {required_aux} auxiliary qubits")
 
-    # Step 3: Subtract N from temp if temp >= N
-    circuit.x(comparison_result)  # Flip comparison_result to control subtraction
-    subtract(circuit, temp, N, R, aux[len(R):len(R) + len(A) + 1])  # Controlled subtraction
-    circuit.x(comparison_result)  # Revert comparison_result to original state
+    # Split auxiliary register
+    temp = aux[:n]  # Temporary register for intermediate results
+    comp_bit = aux[n]  # Comparison result qubit
+    carry_bits = aux[n + 1:2 * n + 2]  # Carry bits for addition
+    adder_aux = aux[2 * n + 2:2 * n + 6]  # Auxiliary qubits for full_adder
 
-    # Step 4: Copy the result from temp to R
-    copy(circuit, temp, R)  # Copy final result to R
+    # Step 1: Add A and B into temp
+    add(circuit, A, B, temp, carry_bits + adder_aux)
 
-    # Reset temp register and comparison_result for future use
-    for qubit in temp:
-        circuit.reset(qubit)
-    circuit.reset(comparison_result)
+    # Step 2: Compare temp with N
+    greater_or_eq(circuit, temp, N, comp_bit, carry_bits)
+
+    # Step 3: Controlled subtraction of N from temp
+    subtract(circuit, temp, N, R, carry_bits + adder_aux)
+
+    # Step 4: If no subtraction, copy temp into R
+    for i in range(len(temp)):
+        circuit.cx(comp_bit, temp[i])
+        circuit.cx(temp[i], R[i])
+        circuit.cx(comp_bit, temp[i])
 
 
 # Multiplication by Two Modulo N
@@ -132,8 +139,18 @@ def times_two_mod(circuit, N, A, R, AUX):
     '''
     Doubles number(A) modulo number(N).
     '''
+    n = len(A)
+    required_aux = 2 * n + 6
+
+    if len(AUX) < required_aux:
+        raise ValueError(f"add_mod needs at least {required_aux} auxiliary qubits")
+
+    temp = AUX[:n]  # Temporary register for intermediate results
+    add_mod_aux = AUX[n:]  # Remaining auxiliary qubits for add_mod
+
     # Copy A to R
     copy(circuit, A, R)
+
     # Add A to R modulo N (R = A + A mod N)
     add_mod(circuit, N, A, R, R, AUX)
 
