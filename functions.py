@@ -25,34 +25,46 @@ def copy(circuit, A, B):
         # Apply CNOT gate
         circuit.cx(a, b)
 
-# Full Adder
 def full_adder(circuit, a, b, r, c_in, c_out, AUX):
     '''
     Implement a full adder.
     '''
-    # Compute result bit with CNOT gates
+    # r = a xor b xor c_in
     circuit.cx(a,r)
     circuit.cx(b,r)
     circuit.cx(c_in,r)
-    # Compute c_out bit with CNOT and Toffoli gates
-    circuit.ccx(a, b, AUX)  # AUX = a AND b
-    circuit.ccx(c_in, r, c_out)
-    circuit.cx(AUX, c_out)
-    # Reverse aux to |0⟩
-    circuit.ccx(a, b, AUX)
+    # AUX[0] = a AND b
+    circuit.ccx(a, b, AUX[0])
+    # AUX[1] = a xor b
+    circuit.cx(a,AUX[1])
+    circuit.cx(b,AUX[1])
+    # AUX[2] = c_in AND (a xor b)
+    circuit.ccx(c_in,AUX[1],AUX[2])
+    # NOT AUX[0] and NOT AUX[2]
+    circuit.x(AUX[0])
+    circuit.x(AUX[2])
+    # AUX[3] = AUX[0] OR AUX[2]
+    circuit.ccx(AUX[0], AUX[2], AUX[3])
+    circuit.x(AUX[3])
+    # c_out = (a AND b) OR (c_in AND (a XOR b))
+    circuit.cx(AUX[3], c_out)
 
 # Addition
 def add(circuit, A, B, R, AUX):
     '''
     Adds number(A) and number(B).
     '''
-    # Initialize carry-in bit to 0
+    n = len(A)
+    # Initialize carry-in to 0 for the first adder
     c_in = AUX[0]
     # Comput cascade of full-adders
-    for i in range(len(A)):
-        c_out = AUX[i+1]
-        full_adder(circuit, A[i], B[i], R[i], c_in, c_out, AUX[i])
-        c_in = c_out # Update for next step
+    for i in range(n):
+        c_out = AUX[i + 1]
+        full_adder(circuit, A[i], B[i], R[i], c_in, c_out, AUX[n+1:])
+        c_in = c_out # Update carry-in
+    # Ensure all auxiliary qubits are reset to |0> after computation (optional)
+    for aux in AUX:
+        circuit.reset(aux)
 
 # Subtraction
 def subtract(circuit, A, B, R, AUX):
@@ -74,21 +86,19 @@ def greater_or_eq(circuit, A, B, r, AUX):
     Test if number(A) >= number(B)
     '''
     n = len(A)
-    # Check if A[i] > B[i]
-    # Iterate from MSB to LSB
-    for i in range(n - 1, -1, -1): 
-        circuit.x(B[i]) # Negate B[i]
-        mcx_gate = MCXGate(2)
-        circuit.append(mcx_gate, qargs=[A[i], B[i], AUX[i]])
-        circuit.x(B[i]) # Reverse B[i]
-    # Check if A[i] = B[i]
-    for i in range(len(A)):
-        circuit.x(AUX[i])
-    # Store result in r
-    circuit.mcx([AUX[:n]], r)
-    # Reset AUX qubits to |0⟩
-    for i in range(len(A)):
-        circuit.x(AUX[i])
+    for i in range(n-1, -1, -1):
+        print("i = ", i)
+        a = A[i]
+        b = B[i]
+        circuit.x(b)
+        circuit.ccx(a, b, AUX[i])
+        circuit.x(b)
+        circuit.x(a)
+        circuit.ccx(a, b, AUX[i-1])
+        circuit.x(a)
+        circuit.x(AUX[i-1])
+        # Store result in r
+        circuit.cx(AUX[i], r)
 
 # Addition Modulo N
 def add_mod(circuit, N, A, B, R, aux):
@@ -158,12 +168,28 @@ def multiply_mod_fixed(circuit, N, X, B, AUX):
     '''
     Multiplies number(B) by a fixed number X modulo number(N),
     the result (X * B mod N) replaces the value in register B.
-    '''
+    
     # Represent the binary value of X
-    bin_X = AUX[:len(B)]
-    copy(circuit, X, bin_X)
+    bin_X = set_bits(circuit, AUX[:len(B)], X)
+    #copy(circuit, X, bin_X)
     # Use multiply_mod to compute X * B modulo N
     multiply_mod(circuit, N, bin_X, B, B, AUX[len(B):])
+    '''
+    # Step 1: Copy B into a temporary register
+    temp = AUX[:len(B)]  # Temporary register for intermediate results
+    copy(circuit, B, temp)
+
+    # Step 2: Multiply B by the fixed number X modulo N
+    # Use the add_mod function to repeatedly add B to itself (X times modulo N)
+    for i in range(X):
+        add_mod(circuit, N, temp, B, temp, AUX[len(B):])
+
+    # Step 3: Copy the result back into B
+    copy(circuit, temp, B)
+
+    # Step 4: Reset the auxiliary qubits
+    for qubit in temp:
+        circuit.reset(qubit)
 
 
 # Multiplication by X^2^k modulo N
