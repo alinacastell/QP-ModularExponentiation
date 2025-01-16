@@ -2,6 +2,7 @@
 # Implementation of functions ordered as instructed
 
 # General imports
+from qiskit.circuit.library import MCXGate
 
 # Initialization
 def set_bits(circuit, A, X):
@@ -76,7 +77,8 @@ def greater_or_eq(circuit, A, B, r, AUX):
     # Iterate from MSB to LSB
     for i in range(n - 1, -1, -1): 
         circuit.x(B[i]) # Negate B[i]
-        circuit.mcx([A[i], B[i]], AUX[i])
+        mcx_gate = MCXGate(num_controls=2)
+        circuit.append(mcx_gate, qargs=[A[i], B[i], AUX[i]])
         circuit.x(B[i]) # Reverse B[i]
     # Check if A[i] = B[i]
     for i in range(len(A)):
