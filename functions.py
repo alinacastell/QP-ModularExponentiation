@@ -2,6 +2,7 @@
 # Implementation of functions ordered as instructed
 
 # General imports
+from qiskit import QuantumCircuit
 from qiskit.circuit.library import MCXGate
 
 # Initialization
@@ -53,10 +54,10 @@ def add(circuit, A, B, R, AUX):
         full_adder(circuit, A[i], B[i], R[i], c_in, c_out, AUX[i])
         c_in = c_out # Update for next step
 
-# Substraction
-def substract(circuit, A, B, R, AUX):
+# Subtraction
+def subtract(circuit, A, B, R, AUX):
     '''
-    Substracts number(A) and number(B).
+    Subtracts number(A) and number(B).
     '''
     # Negate each bit of B
     for b in B:
@@ -77,7 +78,7 @@ def greater_or_eq(circuit, A, B, r, AUX):
     # Iterate from MSB to LSB
     for i in range(n - 1, -1, -1): 
         circuit.x(B[i]) # Negate B[i]
-        mcx_gate = MCXGate(num_controls=2)
+        mcx_gate = MCXGate(2)
         circuit.append(mcx_gate, qargs=[A[i], B[i], AUX[i]])
         circuit.x(B[i]) # Reverse B[i]
     # Check if A[i] = B[i]
@@ -91,7 +92,29 @@ def greater_or_eq(circuit, A, B, r, AUX):
 
 # Addition Modulo N
 def add_mod(circuit, N, A, B, R, aux):
-    ''''''
+    '''
+    Adds number(A) to number(B) modulo number(N).
+    '''
+    # Step 1: Add A and B, store result temporarily in aux[:len(R)]
+    temp = aux[:len(R)]  # Use a temporary register for intermediate results
+    add(circuit, A, B, temp, aux[len(R):len(R) + len(A) + 1])  # A + B stored in temp
+
+    # Step 2: Compare if temp >= N
+    comparison_result = aux[-1]  # Use the last aux qubit to store the comparison result
+    greater_or_eq(circuit, temp, N, comparison_result, aux[len(R):len(R) + len(A)])  # Check if temp >= N
+
+    # Step 3: Subtract N from temp if temp >= N
+    circuit.x(comparison_result)  # Flip comparison_result to control subtraction
+    subtract(circuit, temp, N, R, aux[len(R):len(R) + len(A) + 1])  # Controlled subtraction
+    circuit.x(comparison_result)  # Revert comparison_result to original state
+
+    # Step 4: Copy the result from temp to R
+    copy(circuit, temp, R)  # Copy final result to R
+
+    # Reset temp register and comparison_result for future use
+    for qubit in temp:
+        circuit.reset(qubit)
+    circuit.reset(comparison_result)
 
 
 # Multiplication by Two Modulo N
