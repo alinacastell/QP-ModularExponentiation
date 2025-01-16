@@ -37,7 +37,7 @@ r = 4
 AUX = [5,6,7,8]
 n = len(AUX)+5
 circuit = QuantumCircuit(n,2)
-set_bits(circuit, [a,b], [1,0])
+set_bits(circuit, [a,b], [0,1])
 full_adder(circuit, a, b, r, c_in, c_out, AUX)
 print("\nFull Adder Circuit\n")
 circuit.barrier()
