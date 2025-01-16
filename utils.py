@@ -2,11 +2,11 @@
 
 from qiskit import transpile
 from qiskit_aer import AerSimulator
+from qiskit.visualization import plot_histogram
+from qiskit import qpy
 
-def print_measures(circuit, x, y):
-    # Measure two qubits and put result to classical bits
-    circuit.measure(x, 0)
-    circuit.measure(y, 1)
+
+def print_measures(circuit):
     # Print circuit diagram
     print(circuit)
     # Define the backend
@@ -18,4 +18,5 @@ def print_measures(circuit, x, y):
     result = backend.run(compiled_circuit, shots=n_shots).result()
     # Extract Information
     counts = result.get_counts(compiled_circuit)
-    print("Counts",counts)
+    print("Counts: ",counts)
+
