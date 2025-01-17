@@ -10,7 +10,6 @@ def set_bits(circuit, A, X):
     '''
     Initialize bits of register A with binary string X.
     '''
-    n = len(A)
     for i in range(len(X)):
         if X[i] == 1:
             # Apply X-gate
@@ -25,6 +24,7 @@ def copy(circuit, A, B):
         # Apply CNOT gate
         circuit.cx(a, b)
 
+# Full Adder
 def full_adder(circuit, a, b, r, c_in, c_out, AUX):
     '''
     Implement a full adder.
@@ -43,11 +43,9 @@ def full_adder(circuit, a, b, r, c_in, c_out, AUX):
     # NOT AUX[0] and NOT AUX[2]
     circuit.x(AUX[0])
     circuit.x(AUX[2])
-    # AUX[3] = AUX[0] OR AUX[2]
-    circuit.ccx(AUX[0], AUX[2], AUX[3])
-    circuit.x(AUX[3])
-    # c_out = (a AND b) OR (c_in AND (a XOR b))
-    circuit.cx(AUX[3], c_out)
+    # c_out = AUX[0] OR AUX[2]
+    circuit.ccx(AUX[0], AUX[2], c_out)
+    circuit.x(c_out)
 
 # Addition
 def add(circuit, A, B, R, AUX):
