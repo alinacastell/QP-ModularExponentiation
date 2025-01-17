@@ -1,8 +1,8 @@
+# Initialization
+
 from functions import *
 from utils import print_measures
 from qiskit import QuantumCircuit
-
-# Initialization
 
 # Code check initialization
 A = [0,1,2]
