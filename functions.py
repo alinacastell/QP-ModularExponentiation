@@ -53,16 +53,22 @@ def add(circuit, A, B, R, AUX):
     Adds number(A) and number(B).
     '''
     n = len(A)
-    # Initialize carry-in to 0 for the first adder
-    c_in = AUX[0]
-    # Comput cascade of full-adders
+    if len(AUX) < n + 4:
+        raise ValueError(f"Need at least {n + 4} auxiliary qubits")
+
+    # Split auxiliary register
+    carry_bits = AUX[:n + 1]  # n+1 carry bits (including initial 0)
+    adder_aux = AUX[n + 1:n + 4]  # 3 auxiliary bits for full_adder
+
+    # Create cascade of full-adders
     for i in range(n):
-        c_out = AUX[i + 1]
-        full_adder(circuit, A[i], B[i], R[i], c_in, c_out, AUX[n+1:])
-        c_in = c_out # Update carry-in
-    # Ensure all auxiliary qubits are reset to |0> after computation (optional)
-    for aux in AUX:
-        circuit.reset(aux)
+        full_adder(circuit, A[i], B[i], R[i],
+                   carry_bits[i], carry_bits[i + 1], adder_aux)
+
+    # Uncompute carries in reverse order
+    for i in range(n - 1, -1, -1):
+        # Reverse the full adder operations for carries
+        circuit.reset(carry_bits[i])
 
 # Subtraction
 def subtract(circuit, A, B, R, AUX):
