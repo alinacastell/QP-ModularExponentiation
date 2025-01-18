@@ -3,6 +3,8 @@
 from functions import *
 from utils import print_measures
 from qiskit import QuantumCircuit
+from qiskit.providers.basic_provider import BasicSimulator
+
 
 # Full Adder
 def full_adder(circuit, a, b, r, c_in, c_out, AUX):
@@ -23,30 +25,32 @@ def full_adder(circuit, a, b, r, c_in, c_out, AUX):
     # NOT AUX[0] and NOT AUX[2]
     circuit.x(AUX[0])
     circuit.x(AUX[2])
-    # AUX[3] = AUX[0] OR AUX[2]
+    # c_out = AUX[0] OR AUX[2]
     circuit.ccx(AUX[0], AUX[2], c_out)
     circuit.x(c_out)
 
 # Addition
-def add(circuit, A, B, R, AUX1, AUX2):
+def add(circuit, A, B, R, AUX):
     '''
     Adds number(A) and number(B).
     '''
     n = len(A)
-    # Initialize carry-in to 0 for the first adder
-    c_in = AUX1[0]
-    # Comput cascade of full-adders
-    for i in range(n):
-        c_out = AUX1[i + 1]
-        full_adder(circuit, A[i], B[i], R[i], c_in, c_out, AUX2)
-        c_in = AUX1[i+1] # Update carry-in
+    if len(AUX) < n + 4:
+        raise ValueError(f"Need at least {n + 4} auxiliary qubits")
 
-        #circuit.measure([c_out,R[0],R[1]], [0, 1,2])
-        print(circuit)
-    
-    # Ensure all auxiliary qubits are reset to |0> after computation (optional)
-    #for aux in AUX2:
-    #    circuit.x(aux)
+    # Split auxiliary register
+    carry_bits = AUX[:n + 1]  # n+1 carry bits (including initial 0)
+    adder_aux = AUX[n + 1:n + 4]  # 3 auxiliary bits for full_adder
+
+    # Create cascade of full-adders
+    for i in range(n):
+        full_adder(circuit, A[i], B[i], R[i],
+                   carry_bits[i], carry_bits[i + 1], adder_aux)
+
+    # Uncompute carries in reverse order
+    #for i in range(n - 1, -1, -1):
+        # Reverse the full adder operations for carries
+    #    circuit.reset(carry_bits[i])
 
 # Code check addition
 #A = [0, 1, 2]
@@ -55,17 +59,18 @@ def add(circuit, A, B, R, AUX1, AUX2):
 #AUX = [10, 11, 12, 13, 14, 15, 16]
 A = [0,1]
 B = [2,3]
-AUX1 = [4,5,6]
+AUX1 = [4,5,6,9,10,11]
 R = [7,8]
-AUX2 = [9,10,11]
 
-n = len(A) + len(B) + len(R) + len(AUX1)+ len(AUX2)
+n = len(A) + len(B) + len(R) + len(AUX1)
 circuit = QuantumCircuit(n, 3)
 print("\nAddition Circuit\n")
+print("A = [a0,a1] = [0,1] // B = [b0,b1] = [1,1]\n")
 set_bits(circuit, R, [0,0,0])
-set_bits(circuit, A, [1,0])
+set_bits(circuit, A, [0,1])
 set_bits(circuit, B, [1,1])
-add(circuit, A, B, R, AUX1, AUX2)
+
+add(circuit, A, B, R, AUX1)
 circuit.barrier()
-circuit.measure([AUX1[2],R[0],R[1]], [0, 1,2])
+circuit.measure([AUX1[2],R[1],R[0]], [0,1,2])
 print_measures(circuit)
