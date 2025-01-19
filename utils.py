@@ -1,10 +1,9 @@
-# Simulation using AerSimulator()
+# Utils 
 
 from qiskit import transpile
 from qiskit_aer import AerSimulator
 from qiskit.visualization import plot_histogram
 from qiskit import qpy
-
 
 def print_measures(circuit):
     # Print circuit diagram

@@ -8,8 +8,8 @@ def copy(circuit, A, B):
     '''
     Copy the binary string of A to the register B.
     '''
+    # Apply CNOT gate
     for a, b in zip(A, B):
-        # Apply CNOT gate
         circuit.cx(a, b)
 
 # Code check copy

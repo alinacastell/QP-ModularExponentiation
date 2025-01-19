@@ -10,9 +10,9 @@ def set_bits(circuit, A, X):
     '''
     Initialize bits of register A with binary string X.
     '''
+    # Apply X-gate
     for i in range(len(X)):
         if X[i] == 1:
-            # Apply X-gate
             circuit.x(A[i])
 
 # Copy
@@ -20,8 +20,8 @@ def copy(circuit, A, B):
     '''
     Copy the binary string of A to the register B.
     '''
+    # Apply CNOT gate
     for a, b in zip(A, B):
-        # Apply CNOT gate
         circuit.cx(a, b)
 
 # Full Adder
@@ -55,20 +55,17 @@ def add(circuit, A, B, R, AUX):
     n = len(A)
     if len(AUX) < n + 4:
         raise ValueError(f"Need at least {n + 4} auxiliary qubits")
-
     # Split auxiliary register
-    carry_bits = AUX[:n + 1]  # n+1 carry bits (including initial 0)
-    adder_aux = AUX[n + 1:n + 4]  # 3 auxiliary bits for full_adder
-
+    carry_bits = AUX[:n + 1]
+    adder_aux = AUX[n + 1:n + 4]
     # Create cascade of full-adders
     for i in range(n):
         full_adder(circuit, A[i], B[i], R[i],
                    carry_bits[i], carry_bits[i + 1], adder_aux)
-
     # Uncompute carries in reverse order
-    for i in range(n - 1, -1, -1):
+    #for i in range(n - 1, -1, -1):
         # Reverse the full adder operations for carries
-        circuit.reset(carry_bits[i])
+    #    circuit.reset(carry_bits[i])
 
 # Subtraction
 def subtract(circuit, A, B, R, AUX):
@@ -82,7 +79,7 @@ def subtract(circuit, A, B, R, AUX):
     circuit.x(AUX[0])
     add(circuit, A, B, R, AUX)
     # Reset carry-in bit to 0
-    circuit.x(AUX[0])
+    #circuit.x(AUX[0])
 
 # Comparison
 def greater_or_eq(circuit, A, B, r, AUX):
@@ -109,29 +106,23 @@ def add_mod(circuit, N, A, B, R, aux):
     '''
     Adds number(A) to number(B) modulo number(N).
     '''
-    # Step 1: Add A and B, store result temporarily in aux[:len(R)]
+    # Add A and B, store result temporarily in aux[:len(R)]
     n = len(A)
     required_aux = 2 * n + 6
-
     if len(aux) < required_aux:
         raise ValueError(f"add_mod needs at least {required_aux} auxiliary qubits")
-
     # Split auxiliary register
-    temp = aux[:n]  # Temporary register for intermediate results
-    comp_bit = aux[n]  # Comparison result qubit
-    carry_bits = aux[n + 1:2 * n + 2]  # Carry bits for addition
-    adder_aux = aux[2 * n + 2:2 * n + 6]  # Auxiliary qubits for full_adder
-
-    # Step 1: Add A and B into temp
+    temp = aux[:n]
+    comp_bit = aux[n]
+    carry_bits = aux[n + 1:2 * n + 2]
+    adder_aux = aux[2 * n + 2:2 * n + 6]
+    # Add A and B into temp
     add(circuit, A, B, temp, carry_bits + adder_aux)
-
-    # Step 2: Compare temp with N
+    # Compare temp with N
     greater_or_eq(circuit, temp, N, comp_bit, carry_bits)
-
-    # Step 3: Controlled subtraction of N from temp
+    # Controlled subtraction of N from temp
     subtract(circuit, temp, N, R, carry_bits + adder_aux)
-
-    # Step 4: If no subtraction, copy temp into R
+    # If no subtraction, copy temp into R
     for i in range(len(temp)):
         circuit.cx(comp_bit, temp[i])
         circuit.cx(temp[i], R[i])
