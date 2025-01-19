@@ -26,27 +26,34 @@ def copy(circuit, A, B):
         circuit.cx(a, b)
 
 # Full Adder
-def full_adder(circuit, a, b, r, c_in, c_out, AUX):
+def full_adder(circuit, a, b, r, c_in, c_out, aux):
     '''
     Implement a full adder.
     '''
     # r = a xor b xor c_in
-    circuit.cx(a,r)
-    circuit.cx(b,r)
-    circuit.cx(c_in,r)
-    # AUX[0] = a AND b
-    circuit.ccx(a, b, AUX[0])
-    # AUX[1] = a xor b
-    circuit.cx(a,AUX[1])
-    circuit.cx(b,AUX[1])
-    # AUX[2] = c_in AND (a xor b)
-    circuit.ccx(c_in,AUX[1],AUX[2])
-    # NOT AUX[0] and NOT AUX[2]
-    circuit.x(AUX[0])
-    circuit.x(AUX[2])
-    # c_out = AUX[0] OR AUX[2]
-    circuit.ccx(AUX[0], AUX[2], c_out)
-    circuit.x(c_out)
+    circuit.cx(a, r)  # sum = a
+    circuit.cx(b, r)  # sum = a ⊕ b
+    circuit.cx(c_in, r)  # sum = a ⊕ b ⊕ c_in
+
+    # Step 2: Compute carry out
+    # First, compute (a AND b) into aux[0]
+    circuit.ccx(a, b, aux[0])  # aux[0] = a AND b
+
+    # Then, compute (a AND c_in) into aux[1]
+    circuit.ccx(a, c_in, aux[1])  # aux[1] = a AND c_in
+
+    # Next, compute (b AND c_in) into aux[2]
+    circuit.ccx(b, c_in, aux[2])  # aux[2] = b AND c_in
+
+    # OR all results together into c_out
+    circuit.cx(aux[0], c_out)  # c_out = (a AND b)
+    circuit.cx(aux[1], c_out)  # c_out = (a AND b) OR (a AND c_in)
+    circuit.cx(aux[2], c_out)  # c_out = (a AND b) OR (a AND c_in) OR (b AND c_in)
+
+    # Step 3: Uncompute auxiliary qubits (in reverse order)
+    circuit.ccx(b, c_in, aux[2])
+    circuit.ccx(a, c_in, aux[1])
+    circuit.ccx(a, b, aux[0])
 
 # Addition
 def add(circuit, A, B, R, AUX):
@@ -56,17 +63,16 @@ def add(circuit, A, B, R, AUX):
     n = len(A)
     if len(AUX) < n + 4:
         raise ValueError(f"Need at least {n + 4} auxiliary qubits")
-    # Split auxiliary register
-    carry_bits = AUX[:n + 1]
-    adder_aux = AUX[n + 1:n + 4]
-    # Create cascade of full-adders
+
+    carry_bits = AUX[:n + 1]  # n+1 carry bits (including initial 0)
+    adder_aux = AUX[n + 1:n + 4]  # 3 auxiliary bits for full_adder
+
+    # Initialize first carry bit to 0
+    circuit.reset(carry_bits[0])
+
+    # Forward pass: Create cascade of full-adders
     for i in range(n):
-        full_adder(circuit, A[i], B[i], R[i],
-                   carry_bits[i], carry_bits[i + 1], adder_aux)
-    # Uncompute carries in reverse order
-    #for i in range(n - 1, -1, -1):
-        # Reverse the full adder operations for carries
-    #    circuit.reset(carry_bits[i])
+        full_adder(circuit, A[i], B[i], carry_bits[i], carry_bits[i + 1], R[i], adder_aux)
 
 # Subtraction
 def subtract(circuit, A, B, R, AUX):
