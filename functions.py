@@ -183,7 +183,6 @@ def multiply_mod_fixed(circuit, N, X, B, AUX):
     Multiplies number(B) by a fixed number X modulo number(N),
     the result (X * B mod N) replaces the value in register B.
     '''
-    print("start X is: ", X)
     n = len(B)
     required_aux = 2 * n + 6
     if len(AUX) < required_aux:
@@ -193,11 +192,9 @@ def multiply_mod_fixed(circuit, N, X, B, AUX):
     add_mod_aux = AUX[n:]
     # Iterate over each bit of the fixed binary number X
     for k in range(len(X)):
-        print("X is: ", X)
         if X[k] == 1:
             # If the k-th bit of X is 1, multiply B by 2^k modulo N
             times_two_power_mod(circuit, N, B, k, temp, add_mod_aux)
-            print("here")
             # Add the result to B modulo N
             add_mod(circuit, N, B, temp, B, add_mod_aux)
 
@@ -229,10 +226,10 @@ def multiply_mod_fixed_power_Y(circuit,N,X,B,AUX,Y):
     '''
     Multiplies number(B) by the number(X^Y) modulo number(N).
     '''
-    # Iterate over each bit of Y
-    for k in range(len(Y)):
-        # If the k-th bit of Y is 0 the operation is skipped
-        # Apply the controlled multiplication by X^(2^k) mod N
-        circuit.x(Y[k])  # Flip Y[k] to use it as control
+    n = len(Y)  # Number of bits in Y
+    for k in range(n):
+        # If k-th bit of Y is 1, use it as a control
+        # Apply multiply_mod_fixed_power_2_k for X^(2^k) modulo N
         multiply_mod_fixed_power_2_k(circuit, N, X, B, AUX, k)
-        circuit.x(Y[k])  # Revert Y[k]
+        for i in range(len(B)):
+            circuit.cx(Y[k], B[i])

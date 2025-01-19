@@ -44,5 +44,3 @@ multiply_mod_fixed_power_2_k(circuit, N, X, B, AUX, k)
 print("\nMultiplication Modulo N Circuit\n")
 circuit.measure([B[1],B[0]], [0,1])
 print_measures(circuit)
-
-# 3*3^2^2 % 3 = 
