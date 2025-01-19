@@ -2,15 +2,19 @@
 
 from functions import *
 from qiskit import QuantumCircuit
-from utils import print_measures
+from utils import *
 
 def multiply_mod_fixed_power_2_k(circuit, N, X, B, AUX, k):
     '''
     Multiplies number(B) by the number(X^2^k) modulo number(N).
     '''
+    # Read N value from the circuit into a list
+    circuit.measure([N[1],N[0]],[0,1])
+    n_char = print_counts(circuit)
+    N_bin = [int(char) for char in list(n_char.keys())[0]]
     # Convert binary numbers X and N to integers
     X_dec = int("".join(map(str, X)), 2)
-    modulo = int("".join(map(str, N)), 2)
+    modulo = int("".join(map(str, N_bin)), 2)
     # Compute W = X^(2^k) mod N in Python
     W_dec = X_dec
     for _ in range(k):
@@ -33,7 +37,7 @@ n = len(B)
 # Create the circuit
 circuit = QuantumCircuit(total_qubits,n)
 # Initialize values
-set_bits(circuit, N, [1,1])
+set_bits(circuit, N, [1,0])
 set_bits(circuit, B, [1,1])
 # Test times_two_mod
 multiply_mod_fixed_power_2_k(circuit, N, X, B, AUX, k)
