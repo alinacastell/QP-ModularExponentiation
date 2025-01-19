@@ -58,6 +58,7 @@ def add(circuit, A, B, R, AUX):
     # Split auxiliary register
     carry_bits = AUX[:n + 1]
     adder_aux = AUX[n + 1:n + 4]
+    print("here3 !\n")
     # Create cascade of full-adders
     for i in range(n):
         full_adder(circuit, A[i], B[i], R[i],
@@ -88,7 +89,6 @@ def greater_or_eq(circuit, A, B, r, AUX):
     '''
     n = len(A)
     for i in range(n-1, -1, -1):
-        print("i = ", i)
         a = A[i]
         b = B[i]
         circuit.x(b)
@@ -116,6 +116,7 @@ def add_mod(circuit, N, A, B, R, aux):
     comp_bit = aux[n]
     carry_bits = aux[n + 1:2 * n + 2]
     adder_aux = aux[2 * n + 2:2 * n + 5]
+    print("here2 !\n")
     # Add A and B into temp
     add(circuit, A, B, temp, carry_bits + adder_aux)
     # Compare temp with N
@@ -135,13 +136,14 @@ def times_two_mod(circuit, N, A, R, AUX):
     Doubles number(A) modulo number(N).
     '''
     n = len(A)
-    required_aux = 2 * n + 6
+    required_aux = 2 * n + 5
     if len(AUX) < required_aux:
         raise ValueError(f"add_mod needs at least {required_aux} auxiliary qubits")
     # Split auxiliary register
     temp = AUX[:n]
     add_mod_aux = AUX[n:]
     # Copy A to R
+    print("here 1!\n")
     copy(circuit, A, R)
     # Add A to R modulo N (R = A + A mod N)
     add_mod(circuit, N, A, temp, R, add_mod_aux)
@@ -152,24 +154,29 @@ def times_two_power_mod(circuit, N, A, k, R, AUX):
     '''
     Multiplies number(A) by 2^k modulo number(N).
     '''
-    for i in range(k):
+    for _ in range(k):
         times_two_mod(circuit, N, A, R, AUX)
-
 
 # Multiplication Modulo N
 def multiply_mod(circuit, N, A, B, R, AUX):
     '''
     Multiplies number(A) with number(B) modulo number(N).
     '''
-    # Initialize the result register R to |0⟩
-    for r in R:
-        circuit.reset(r)  # Ensure R starts at |0⟩
-    # Iterate over each bit in B
+    n = len(A)
+    required_aux = 2 * n + 6
+    if len(AUX) < required_aux:
+        raise ValueError(f"multiply_mod needs at least {required_aux} auxiliary qubits.")
+    # Compute partial sums for k = 0 to len(B) - 1
     for k in range(len(B)):
-        # Apply controlled multiplication by 2^k modulo N
-        times_two_power_mod(circuit, N, A, k, AUX[:len(A)], AUX[len(A):])
-        for i in range(len(A)):
-            circuit.cx(B[k], AUX[k])
+        # Split auxiliary register
+        temp = AUX[:n]
+        add_mod_aux = AUX[n:]
+        # Controlled multiplication by 2^k mod N
+        times_two_power_mod(circuit, N, A, k, temp, add_mod_aux)
+        # Controlled addition of temp to the result R modulo N
+        for i in range(len(R)):
+            circuit.cx(B[k], temp[i])
+        add_mod(circuit, N, R, temp, R, add_mod_aux)
 
 
 # Multiplication Modulo N with a hard-coded factor

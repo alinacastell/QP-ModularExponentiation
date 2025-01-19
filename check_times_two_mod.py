@@ -1,8 +1,9 @@
+# Multiplication by Two Modulo N
+
 from functions import *
 from qiskit import QuantumCircuit
 from utils import print_measures
 
-# Multiplication by Two Modulo N
 def times_two_mod(circuit, N, A, R, AUX):
     '''
     Doubles number(A) modulo number(N).
@@ -27,7 +28,7 @@ total_qubits = 3*n + required_aux
 N = list(range(0, n))
 A = list(range(n, 2 * n))
 R = list(range(2 * n, 3 * n))
-aux = list(range(3 * n, total_qubits))
+AUX = list(range(3 * n, total_qubits))
 
 # Create the circuit
 circuit = QuantumCircuit(total_qubits,n)
@@ -37,7 +38,7 @@ set_bits(circuit, N, [1,1])  # N = 7 (binary)
 set_bits(circuit, A, [0,1])  # A = 3 (binary)
 
 # Test times_two_mod
-times_two_mod(circuit, N, A, R, aux)
+times_two_mod(circuit, N, A, R, AUX)
 print("\nMultiplication by two Modulo N Circuit\n")
 print("N = [1,1] // A = [0,1]\n")
 circuit.measure([R[1],R[0]], [0,1])
