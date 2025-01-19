@@ -14,8 +14,6 @@ def subtract(circuit, A, B, R, AUX):
     # Initialize carry-in bit to 1
     circuit.x(AUX[0])
     add(circuit, A, B, R, AUX)
-    # Reset carry-in bit to 0
-    #circuit.x(AUX[0])
 
 # Code check 2-qubit subtraction
 '''
@@ -35,8 +33,8 @@ circuit.barrier()
 circuit.measure([AUX[2],R[1],R[0]], [0,1,2])
 print_measures(circuit)
 '''
-# Code check 3-qubit subtraction
 
+# Code check 3-qubit subtraction
 A = [0,1,2]
 B = [3,4,5]
 R = [6,7,8]
@@ -47,7 +45,6 @@ set_bits(circuit, A, [1,0,0])
 set_bits(circuit, B,[1,1,0])
 subtract(circuit, A, B, R, AUX)
 print("\nSubtraction Circuit\n")
-print("A = [a0,a1,a2] = [1,0,0] // B = [b0,b1,b2] = [1,1,0]\n")
 circuit.barrier()
 circuit.measure(R, [0,1,2])
 print_measures(circuit)

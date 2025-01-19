@@ -85,8 +85,6 @@ def subtract(circuit, A, B, R, AUX):
     # Initialize carry-in bit to 1
     circuit.x(AUX[0])
     add(circuit, A, B, R, AUX)
-    # Reset carry-in bit to 0
-    #circuit.x(AUX[0])
 
 # Comparison
 def greater_or_eq(circuit, A, B, r, AUX):
