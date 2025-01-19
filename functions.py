@@ -58,7 +58,6 @@ def add(circuit, A, B, R, AUX):
     # Split auxiliary register
     carry_bits = AUX[:n + 1]
     adder_aux = AUX[n + 1:n + 4]
-    print("here3 !\n")
     # Create cascade of full-adders
     for i in range(n):
         full_adder(circuit, A[i], B[i], R[i],
@@ -116,7 +115,6 @@ def add_mod(circuit, N, A, B, R, aux):
     comp_bit = aux[n]
     carry_bits = aux[n + 1:2 * n + 2]
     adder_aux = aux[2 * n + 2:2 * n + 5]
-    print("here2 !\n")
     # Add A and B into temp
     add(circuit, A, B, temp, carry_bits + adder_aux)
     # Compare temp with N
@@ -143,7 +141,6 @@ def times_two_mod(circuit, N, A, R, AUX):
     temp = AUX[:n]
     add_mod_aux = AUX[n:]
     # Copy A to R
-    print("here 1!\n")
     copy(circuit, A, R)
     # Add A to R modulo N (R = A + A mod N)
     add_mod(circuit, N, A, temp, R, add_mod_aux)
@@ -184,28 +181,21 @@ def multiply_mod_fixed(circuit, N, X, B, AUX):
     '''
     Multiplies number(B) by a fixed number X modulo number(N),
     the result (X * B mod N) replaces the value in register B.
-    
-    # Represent the binary value of X
-    bin_X = set_bits(circuit, AUX[:len(B)], X)
-    #copy(circuit, X, bin_X)
-    # Use multiply_mod to compute X * B modulo N
-    multiply_mod(circuit, N, bin_X, B, B, AUX[len(B):])
     '''
-    # Step 1: Copy B into a temporary register
-    temp = AUX[:len(B)]  # Temporary register for intermediate results
-    copy(circuit, B, temp)
-
-    # Step 2: Multiply B by the fixed number X modulo N
-    # Use the add_mod function to repeatedly add B to itself (X times modulo N)
-    for i in range(X):
-        add_mod(circuit, N, temp, B, temp, AUX[len(B):])
-
-    # Step 3: Copy the result back into B
-    copy(circuit, temp, B)
-
-    # Step 4: Reset the auxiliary qubits
-    for qubit in temp:
-        circuit.reset(qubit)
+    n = len(B)
+    required_aux = 2 * n + 6
+    if len(AUX) < required_aux:
+        raise ValueError(f"multiply_mod needs at least {required_aux} auxiliary qubits.")
+    # Split auxiliary register
+    temp = AUX[:n]
+    add_mod_aux = AUX[n:]
+    # Iterate over each bit of the fixed binary number X
+    for k in range(len(X)):
+        if X[k] == 1:
+            # If the k-th bit of X is 1, multiply B by 2^k modulo N
+            times_two_power_mod(circuit, N, B, k, temp, add_mod_aux)
+            # Add the result to B modulo N
+            add_mod(circuit, N, B, temp, B, add_mod_aux)
 
 
 # Multiplication by X^2^k modulo N
@@ -213,12 +203,17 @@ def multiply_mod_fixed_power_2_k(circuit, N, X, B, AUX, k):
     '''
     Multiplies number(B) by the number(X^2^k) modulo number(N).
     '''
-    # Pre-compute W = X^(2^k) mod N using classical computation
-    W = X
+    # Convert binary numbers X and N to integers
+    X_dec = int("".join(map(str, X)), 2)
+    modulo = int("".join(map(str, N)), 2)
+    # Compute W = X^(2^k) mod N in Python
+    W_dec = X_dec
     for _ in range(k):
-        W = (W * W) % int(''.join(map(str, N)), 2)
-    # Use the precomputed W to call multiply_mod_fixed
-    multiply_mod_fixed(circuit, N, W, B, AUX)
+        W_dec = (W_dec ** 2) % modulo
+    # Convert W to binary as a list of integers of length X
+    W_bin = list(map(int, bin(W_dec)[2:].zfill(len(X))))
+    # Call multiply_mod_fixed to implement the circuit
+    multiply_mod_fixed(circuit, N, W_bin, B, AUX)
 
 
 # Multiplication by X^Y modulo N

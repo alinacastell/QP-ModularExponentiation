@@ -8,7 +8,6 @@ def multiply_mod_fixed(circuit, N, X, B, AUX):
     '''
     Multiplies number(B) by a fixed number X modulo number(N),
     the result (X * B mod N) replaces the value in register B.
-    That is, the circuit implements a unitary transformation that sends |number(B)⟩|0⟩ to |X* number(B) mod N⟩|0⟩
     '''
     n = len(B)
     required_aux = 2 * n + 6
