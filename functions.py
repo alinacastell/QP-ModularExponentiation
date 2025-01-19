@@ -108,14 +108,14 @@ def add_mod(circuit, N, A, B, R, aux):
     '''
     # Add A and B, store result temporarily in aux[:len(R)]
     n = len(A)
-    required_aux = 2 * n + 6
+    required_aux = 2 * n + 5
     if len(aux) < required_aux:
         raise ValueError(f"add_mod needs at least {required_aux} auxiliary qubits")
     # Split auxiliary register
     temp = aux[:n]
     comp_bit = aux[n]
     carry_bits = aux[n + 1:2 * n + 2]
-    adder_aux = aux[2 * n + 2:2 * n + 6]
+    adder_aux = aux[2 * n + 2:2 * n + 5]
     # Add A and B into temp
     add(circuit, A, B, temp, carry_bits + adder_aux)
     # Compare temp with N
@@ -136,18 +136,15 @@ def times_two_mod(circuit, N, A, R, AUX):
     '''
     n = len(A)
     required_aux = 2 * n + 6
-
     if len(AUX) < required_aux:
         raise ValueError(f"add_mod needs at least {required_aux} auxiliary qubits")
-
-    temp = AUX[:n]  # Temporary register for intermediate results
-    add_mod_aux = AUX[n:]  # Remaining auxiliary qubits for add_mod
-
+    # Split auxiliary register
+    temp = AUX[:n]
+    add_mod_aux = AUX[n:]
     # Copy A to R
     copy(circuit, A, R)
-
     # Add A to R modulo N (R = A + A mod N)
-    add_mod(circuit, N, A, R, R, AUX)
+    add_mod(circuit, N, A, temp, R, add_mod_aux)
 
 
 # Multiplication by a Power of Two Modulo N

@@ -41,7 +41,7 @@ A = [0,1,2]
 B = [3,4,5]
 R = [6,7,8]
 AUX = [9,10,11,12, 13, 14,15]
-n = len(A) + len(B) + len(R) + len(AUX) + 4
+n = len(A) + len(B) + len(R) + len(AUX)
 circuit = QuantumCircuit(n,len(R))
 set_bits(circuit, A, [1,0,0])
 set_bits(circuit, B,[1,1,0])
